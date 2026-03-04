@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>mortun5391</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      display: grid;
+      place-items: center;
+      background: #04060b;
+      color: #eaf0ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      overflow: hidden;
+    }
+
+    canvas#stars{
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: .85;
+      filter: blur(.1px);
+    }
+
+    .glow{
+      position: fixed;
+      inset: -20%;
+      z-index: 1;
+      background:
+        radial-gradient(700px 380px at 45% 40%, rgba(120,140,255,.10), transparent 60%),
+        radial-gradient(800px 520px at 60% 60%, rgba(90,255,200,.05), transparent 58%),
+        radial-gradient(900px 600px at 35% 70%, rgba(255,120,180,.035), transparent 60%);
+      animation: drift 18s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+    @keyframes drift {
+      from { transform: translate3d(-1.5%, -1%, 0) scale(1); }
+      to   { transform: translate3d( 1.5%,  1%, 0) scale(1.02); }
+    }
+
+    .wrap{
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 28px 22px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 30px 120px rgba(0,0,0,0.65);
+      backdrop-filter: blur(8px);
+      min-width: min(620px, calc(100vw - 28px));
+      transition: transform .08s linear, filter .08s linear;
+    }
+
+    h1{
+      margin: 2px 0 18px;
+      font-size: clamp(34px, 6vw, 64px);
+      letter-spacing: 1px;
+      font-weight: 700;
+      text-shadow: 0 0 28px rgba(140,160,255,.18);
+      position: relative;
+      display: inline-block;
+      user-select: none;
+    }
+
+    .grid{
+      display: grid;
+      grid-template-columns: repeat(4, minmax(86px, 1fr));
+      gap: 12px;
+      margin: 0 auto;
+      max-width: 560px;
+    }
+
+    .card{
+      border-radius: 18px;
+      padding: 14px 12px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.07);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+    }
+
+    .num{
+      font-size: clamp(22px, 4vw, 38px);
+      font-weight: 850;
+      letter-spacing: 0.9px;
+    }
+
+    .sig{
+      margin-top: 18px;
+      font-size: 12px;
+      opacity: .35;
+      letter-spacing: 2.4px;
+      min-height: 18px;
+      user-select: none;
+      transition: opacity .15s linear;
+    }
+
+    /* -------- GLITCH VISUALS -------- */
+    .glitching{
+      animation: shake 120ms steps(2, end) infinite;
+      filter: contrast(1.25) saturate(1.2);
+    }
+    @keyframes shake{
+      0%   { transform: translate3d(0,0,0); }
+      25%  { transform: translate3d(-1px, 1px,0); }
+      50%  { transform: translate3d( 1px,-1px,0); }
+      75%  { transform: translate3d(-2px, 0px,0); }
+      100% { transform: translate3d( 0px, 0px,0); }
+    }
+
+    /* glitch slices overlay */
+    .glitch-scan{
+      position: fixed;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+      opacity: 0;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          rgba(255,255,255,.06) 0px,
+          rgba(255,255,255,.06) 1px,
+          rgba(0,0,0,0) 2px,
+          rgba(0,0,0,0) 6px
+        );
+      mix-blend-mode: overlay;
+      transition: opacity .08s linear;
+    }
+    .glitch-scan.on{ opacity: .55; }
+
+    /* title text split effect when glitching */
+    .split::before, .split::after{
+      content: attr(data-text);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      overflow: hidden;
+      opacity: .75;
+      pointer-events: none;
+    }
+    .split::before{
+      transform: translate(-2px, -1px);
+      clip-path: inset(0 0 55% 0);
+      color: rgba(120,255,210,.75);
+      text-shadow: 0 0 14px rgba(120,255,210,.12);
+    }
+    .split::after{
+      transform: translate(2px, 1px);
+      clip-path: inset(45% 0 0 0);
+      color: rgba(160,140,255,.75);
+      text-shadow: 0 0 14px rgba(160,140,255,.12);
+    }
+
+    @media (max-width: 520px){
+      .wrap{ min-width: auto; width: calc(100vw - 28px); }
+      .grid{ grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stars"></canvas>
+  <div class="glow"></div>
+  <div class="glitch-scan" id="scan"></div>
+
+  <div class="wrap" id="wrap">
+    <h1 id="title" data-text="mortun5391">mortun5391</h1>
+
+    <div class="grid" aria-label="countdown">
+      <div class="card"><div class="num" id="d">—</div></div>
+      <div class="card"><div class="num" id="h">—</div></div>
+      <div class="card"><div class="num" id="m">—</div></div>
+      <div class="card"><div class="num" id="s">—</div></div>
+    </div>
+
+    <div class="sig" id="sig"></div>
+  </div>
+
+  <script>
+    // console easter egg
+    console.log("14 05 2026");
+
+    // target moment
+    const target = new Date("2026-05-14T00:00:00+03:00");
+
+    const $d = document.getElementById("d");
+    const $h = document.getElementById("h");
+    const $m = document.getElementById("m");
+    const $s = document.getElementById("s");
+    const $sig = document.getElementById("sig");
+    const $wrap = document.getElementById("wrap");
+    const $title = document.getElementById("title");
+    const $scan = document.getElementById("scan");
+
+    function pad2(n){ return String(n).padStart(2, "0"); }
+
+    const phrases = [
+      "signal detected",
+      "do not look away",
+      "not yet",
+      "keep moving",
+      "stay quiet",
+      "incoming...",
+      "remember",
+      "— — —"
+    ];
+
+    const secretPhrases = [
+      "ACCESSING...",
+      "DECRYPTING",
+      "HANDSHAKE",
+      "CHANNEL OPEN",
+      "ECHO CONFIRMED",
+      "LOCKED"
+    ];
+
+    let glitchBusy = false;
+
+    function showTemp(text, ms=900, op=0.48){
+      $sig.textContent = text;
+      $sig.style.opacity = String(op);
+      setTimeout(() => {
+        if ($sig.textContent === text) $sig.textContent = "";
+        $sig.style.opacity = "0.35";
+      }, ms);
+    }
+
+    function glitch(durationMs = 420, hard = false){
+      if (glitchBusy) return;
+      glitchBusy = true;
+
+      $wrap.classList.add("glitching");
+      $title.classList.add("split");
+      $scan.classList.add("on");
+
+      const start = performance.now();
+      const base = hard ? 3.2 : 1.4;
+      const rotBase = hard ? 0.9 : 0.35;
+
+      const timer = setInterval(() => {
+        const dx = (Math.random() - 0.5) * base;
+        const dy = (Math.random() - 0.5) * base;
+        const r  = (Math.random() - 0.5) * rotBase;
+
+        $wrap.style.transform = `translate3d(${dx}px,${dy}px,0) rotate(${r}deg)`;
+        // random scan opacity flicker
+        $scan.style.opacity = String(hard ? (0.35 + Math.random() * 0.45) : (0.25 + Math.random() * 0.25));
+      }, 40);
+
+      setTimeout(() => {
+        clearInterval(timer);
+        $wrap.classList.remove("glitching");
+        $title.classList.remove("split");
+        $scan.classList.remove("on");
+        $wrap.style.transform = "";
+        $scan.style.opacity = "";
+        glitchBusy = false;
+      }, durationMs);
+    }
+
+    function maybeSignal(sec){
+      // occasional normal signals
+      if (sec % 29 === 0 || sec % 37 === 0) {
+        const msg = phrases[Math.floor(Math.random() * phrases.length)];
+        showTemp(msg, 1100, 0.46);
+      }
+      // rare random glitch pulses
+      if (sec % 41 === 0) glitch(260, false);
+      if (sec % 53 === 0) glitch(340, false);
+    }
+
+    function tick(){
+      const now = new Date();
+      let diff = target - now;
+
+      if (diff <= 0){
+        $d.textContent = "0";
+        $h.textContent = "00";
+        $m.textContent = "00";
+        $s.textContent = "00";
+        $sig.textContent = "it begins";
+        $sig.style.opacity = "0.58";
+        return;
+      }
+
+      const totalSec = Math.floor(diff / 1000);
+      const days = Math.floor(totalSec / 86400);
+      const hours = Math.floor((totalSec % 86400) / 3600);
+      const mins = Math.floor((totalSec % 3600) / 60);
+      const secs = totalSec % 60;
+
+      $d.textContent = String(days);
+      $h.textContent = pad2(hours);
+      $m.textContent = pad2(mins);
+      $s.textContent = pad2(secs);
+
+      maybeSignal(secs);
+    }
+
+    tick();
+    setInterval(tick, 250);
+
+    // secret combo: 5391
+    let buf = "";
+    let lastKeyTs = 0;
+
+    function onKey(e){
+      const now = Date.now();
+      if (now - lastKeyTs > 900) buf = ""; // reset if user pauses
+      lastKeyTs = now;
+
+      const k = e.key;
+      if (k.length === 1 && /[0-9]/.test(k)) {
+        buf += k;
+        if (buf.length > 8) buf = buf.slice(-8);
+
+        if (buf.endsWith("5391")) {
+          const msg = secretPhrases[Math.floor(Math.random() * secretPhrases.length)];
+          showTemp(msg, 1000, 0.55);
+          glitch(650, true);
+          // extra: quick second pulse
+          setTimeout(() => glitch(280, false), 720);
+          buf = "";
+        }
+      }
+    }
+    window.addEventListener("keydown", onKey);
+
+    // ===== stars canvas =====
+    const canvas = document.getElementById("stars");
+    const ctx = canvas.getContext("2d", { alpha: true });
+
+    let W, H, DPR;
+    let stars = [];
+    const STAR_COUNT = 220;
+
+    function resize(){
+      DPR = Math.min(2, window.devicePixelRatio || 1);
+      W = Math.floor(window.innerWidth * DPR);
+      H = Math.floor(window.innerHeight * DPR);
+      canvas.width = W;
+      canvas.height = H;
+      canvas.style.width = window.innerWidth + "px";
+      canvas.style.height = window.innerHeight + "px";
+
+      stars = new Array(STAR_COUNT).fill(0).map(() => ({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: (Math.random() * 1.2 + 0.3) * DPR,
+        v: (Math.random() * 0.22 + 0.06) * DPR,
+        a: Math.random() * 0.65 + 0.15,
+        tw: Math.random() * 6 + 2
+      }));
+    }
+
+    function draw(t){
+      ctx.clearRect(0, 0, W, H);
+
+      // subtle vignette
+      ctx.fillStyle = "rgba(0,0,0,0.22)";
+      ctx.fillRect(0, 0, W, H);
+
+      for (const s of stars){
+        s.y += s.v;
+        if (s.y > H + 10) { s.y = -10; s.x = Math.random() * W; }
+
+        const tw = 0.5 + 0.5 * Math.sin((t/1000) * (1/s.tw) + s.x * 0.002);
+        const alpha = Math.max(0, Math.min(1, s.a * (0.55 + 0.45 * tw)));
+
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(230,240,255,${alpha})`;
+        ctx.fill();
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    resize();
+    window.addEventListener("resize", resize);
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>
