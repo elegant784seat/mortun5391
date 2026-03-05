@@ -26,6 +26,19 @@
       filter: blur(.1px);
     }
 
+    /* extra layer for "confetti"/sparkles on the final moment */
+    canvas#spark{
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transition: opacity .8s ease;
+      pointer-events: none;
+      z-index: 2;
+    }
+    body.final canvas#spark{ opacity: .9; }
+
     .glow{
       position: fixed;
       inset: -20%;
@@ -36,15 +49,21 @@
         radial-gradient(900px 600px at 35% 70%, rgba(255,120,180,.035), transparent 60%);
       animation: drift 18s ease-in-out infinite alternate;
       pointer-events: none;
+      transition: filter 1.2s ease, opacity 1.2s ease;
     }
     @keyframes drift {
       from { transform: translate3d(-1.5%, -1%, 0) scale(1); }
       to   { transform: translate3d( 1.5%,  1%, 0) scale(1.02); }
     }
 
+    body.final .glow{
+      opacity: .95;
+      filter: brightness(1.15) saturate(1.12);
+    }
+
     .wrap{
       position: relative;
-      z-index: 2;
+      z-index: 3;
       text-align: center;
       padding: 28px 22px;
       border-radius: 22px;
@@ -53,7 +72,16 @@
       box-shadow: 0 30px 120px rgba(0,0,0,0.65);
       backdrop-filter: blur(8px);
       min-width: min(620px, calc(100vw - 28px));
-      transition: transform .08s linear, filter .08s linear;
+      transition:
+        transform .08s linear,
+        filter .08s linear,
+        background .8s ease,
+        border-color .8s ease;
+    }
+
+    body.final .wrap{
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.12);
     }
 
     h1{
@@ -73,6 +101,7 @@
       gap: 12px;
       margin: 0 auto;
       max-width: 560px;
+      transition: opacity .8s ease, transform .8s ease, filter .8s ease;
     }
 
     .card{
@@ -96,7 +125,32 @@
       letter-spacing: 2.4px;
       min-height: 18px;
       user-select: none;
-      transition: opacity .15s linear;
+      transition: opacity .15s linear, font-size .8s ease, letter-spacing .8s ease;
+    }
+
+    /* final message */
+    .finalmsg{
+      margin-top: 18px;
+      font-size: 0px;
+      opacity: 0;
+      letter-spacing: 2px;
+      transform: translateY(6px);
+      transition: opacity .9s ease, transform .9s ease, font-size .9s ease, letter-spacing .9s ease;
+      user-select: none;
+      text-shadow: 0 0 26px rgba(160,140,255,.14);
+    }
+    body.final .finalmsg{
+      opacity: 0.92;
+      transform: translateY(0);
+      font-size: clamp(20px, 3.2vw, 30px);
+      letter-spacing: 1.5px;
+    }
+
+    body.final .grid{
+      opacity: 0;
+      transform: translateY(10px);
+      filter: blur(2px);
+      pointer-events: none;
     }
 
     /* -------- GLITCH VISUALS -------- */
@@ -112,11 +166,10 @@
       100% { transform: translate3d( 0px, 0px,0); }
     }
 
-    /* glitch slices overlay */
     .glitch-scan{
       position: fixed;
       inset: 0;
-      z-index: 3;
+      z-index: 4;
       pointer-events: none;
       opacity: 0;
       background:
@@ -132,7 +185,6 @@
     }
     .glitch-scan.on{ opacity: .55; }
 
-    /* title text split effect when glitching */
     .split::before, .split::after{
       content: attr(data-text);
       position: absolute;
@@ -164,13 +216,14 @@
 </head>
 <body>
   <canvas id="stars"></canvas>
+  <canvas id="spark"></canvas>
   <div class="glow"></div>
   <div class="glitch-scan" id="scan"></div>
 
   <div class="wrap" id="wrap">
     <h1 id="title" data-text="mortun5391">mortun5391</h1>
 
-    <div class="grid" aria-label="countdown">
+    <div class="grid" id="grid" aria-label="countdown">
       <div class="card"><div class="num" id="d">—</div></div>
       <div class="card"><div class="num" id="h">—</div></div>
       <div class="card"><div class="num" id="m">—</div></div>
@@ -178,10 +231,10 @@
     </div>
 
     <div class="sig" id="sig"></div>
+    <div class="finalmsg" id="finalmsg">happy B-Day mortun5391</div>
   </div>
 
   <script>
-    // console easter egg
     console.log("14 05 2026");
 
     // target moment
@@ -195,6 +248,8 @@
     const $wrap = document.getElementById("wrap");
     const $title = document.getElementById("title");
     const $scan = document.getElementById("scan");
+    const $grid = document.getElementById("grid");
+    const $final = document.getElementById("finalmsg");
 
     function pad2(n){ return String(n).padStart(2, "0"); }
 
@@ -219,8 +274,10 @@
     ];
 
     let glitchBusy = false;
+    let finalDone = false;
 
     function showTemp(text, ms=900, op=0.48){
+      if (finalDone) return;
       $sig.textContent = text;
       $sig.style.opacity = String(op);
       setTimeout(() => {
@@ -237,7 +294,6 @@
       $title.classList.add("split");
       $scan.classList.add("on");
 
-      const start = performance.now();
       const base = hard ? 3.2 : 1.4;
       const rotBase = hard ? 0.9 : 0.35;
 
@@ -245,9 +301,7 @@
         const dx = (Math.random() - 0.5) * base;
         const dy = (Math.random() - 0.5) * base;
         const r  = (Math.random() - 0.5) * rotBase;
-
         $wrap.style.transform = `translate3d(${dx}px,${dy}px,0) rotate(${r}deg)`;
-        // random scan opacity flicker
         $scan.style.opacity = String(hard ? (0.35 + Math.random() * 0.45) : (0.25 + Math.random() * 0.25));
       }, 40);
 
@@ -263,14 +317,34 @@
     }
 
     function maybeSignal(sec){
-      // occasional normal signals
+      if (finalDone) return;
       if (sec % 29 === 0 || sec % 37 === 0) {
         const msg = phrases[Math.floor(Math.random() * phrases.length)];
         showTemp(msg, 1100, 0.46);
       }
-      // rare random glitch pulses
       if (sec % 41 === 0) glitch(260, false);
       if (sec % 53 === 0) glitch(340, false);
+    }
+
+    function runFinal(){
+      if (finalDone) return;
+      finalDone = true;
+
+      document.body.classList.add("final");
+
+      // tiny "ceremony": soft glitch -> message -> sparkles
+      glitch(520, true);
+
+      $sig.textContent = "";
+      $sig.style.opacity = "0";
+
+      // show the message slightly after the glitch
+      setTimeout(() => {
+        $final.style.opacity = "0.92";
+      }, 260);
+
+      // start sparkles animation
+      startSparkles();
     }
 
     function tick(){
@@ -282,8 +356,7 @@
         $h.textContent = "00";
         $m.textContent = "00";
         $s.textContent = "00";
-        $sig.textContent = "it begins";
-        $sig.style.opacity = "0.58";
+        runFinal();
         return;
       }
 
@@ -304,13 +377,13 @@
     tick();
     setInterval(tick, 250);
 
-    // secret combo: 5391
+    // secret combo: 5391 (still works even in final mode, just makes it glitch)
     let buf = "";
     let lastKeyTs = 0;
 
     function onKey(e){
       const now = Date.now();
-      if (now - lastKeyTs > 900) buf = ""; // reset if user pauses
+      if (now - lastKeyTs > 900) buf = "";
       lastKeyTs = now;
 
       const k = e.key;
@@ -320,9 +393,8 @@
 
         if (buf.endsWith("5391")) {
           const msg = secretPhrases[Math.floor(Math.random() * secretPhrases.length)];
-          showTemp(msg, 1000, 0.55);
-          glitch(650, true);
-          // extra: quick second pulse
+          if (!finalDone) showTemp(msg, 1000, 0.55);
+          glitch(finalDone ? 520 : 650, true);
           setTimeout(() => glitch(280, false), 720);
           buf = "";
         }
@@ -360,7 +432,6 @@
     function draw(t){
       ctx.clearRect(0, 0, W, H);
 
-      // subtle vignette
       ctx.fillStyle = "rgba(0,0,0,0.22)";
       ctx.fillRect(0, 0, W, H);
 
@@ -383,6 +454,85 @@
     resize();
     window.addEventListener("resize", resize);
     requestAnimationFrame(draw);
+
+    // ===== sparkles (final only) =====
+    const sparkCanvas = document.getElementById("spark");
+    const sctx = sparkCanvas.getContext("2d", { alpha: true });
+
+    let SW, SH, SDPR;
+    let sparks = [];
+    let sparkRunning = false;
+
+    function sresize(){
+      SDPR = Math.min(2, window.devicePixelRatio || 1);
+      SW = Math.floor(window.innerWidth * SDPR);
+      SH = Math.floor(window.innerHeight * SDPR);
+      sparkCanvas.width = SW;
+      sparkCanvas.height = SH;
+      sparkCanvas.style.width = window.innerWidth + "px";
+      sparkCanvas.style.height = window.innerHeight + "px";
+    }
+    window.addEventListener("resize", sresize);
+    sresize();
+
+    function spawnSpark(){
+      const x = Math.random() * SW;
+      const y = -20 * SDPR;
+      const vy = (Math.random() * 1.2 + 0.8) * SDPR;
+      const vx = (Math.random() - 0.5) * 0.6 * SDPR;
+      const life = Math.random() * 1400 + 900;
+      const size = (Math.random() * 2.0 + 0.7) * SDPR;
+      return { x, y, vx, vy, life, born: performance.now(), size };
+    }
+
+    function startSparkles(){
+      if (sparkRunning) return;
+      sparkRunning = true;
+
+      // create initial burst
+      sparks = new Array(120).fill(0).map(() => spawnSpark());
+
+      const loop = (t) => {
+        if (!sparkRunning) return;
+
+        sctx.clearRect(0, 0, SW, SH);
+
+        // draw faint spark trails
+        for (let i = sparks.length - 1; i >= 0; --i){
+          const p = sparks[i];
+          const age = t - p.born;
+          if (age > p.life){
+            sparks.splice(i, 1);
+            continue;
+          }
+
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy *= 1.003; // slight acceleration
+
+          const k = 1 - age / p.life;
+          const a = 0.22 + 0.38 * k;
+
+          sctx.beginPath();
+          sctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          sctx.fillStyle = `rgba(230,240,255,${a})`;
+          sctx.fill();
+        }
+
+        // keep a gentle stream for a while
+        if (sparks.length < 140) sparks.push(spawnSpark());
+
+        requestAnimationFrame(loop);
+      };
+
+      requestAnimationFrame(loop);
+
+      // after ~12s, stop spawning heavily (leave subtle)
+      setTimeout(() => {
+        // keep only a few
+        sparks = sparks.slice(0, 60);
+      }, 12000);
+    }
   </script>
 </body>
 </html>
